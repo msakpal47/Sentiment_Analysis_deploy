@@ -1,0 +1,54 @@
+http://13.60.76.117/predict
+
+Here is the summary of the steps for your future reference:
+
+### 1. Transfer Files (WinSCP)
+- Host : Your EC2 IP (e.g., 13.60.76.117 )
+- User : ec2-user
+- Action : Drag and drop the contents of deploy on aws (including models/ , app.py , requirements.txt ) to /home/ec2-user/ .
+### 2. Connect to Server (PuTTY/SSH)
+Login to your instance via SSH to run the commands.
+
+### 3. Redeployment Commands
+Copy and run these commands whenever you update your code:
+
+```
+# 1. Stop the currently running 
+container
+docker stop $(docker ps -q)
+
+# 2. Remove the stopped container
+docker rm $(docker ps -a -q)
+
+# 3. Build the new Docker image 
+(This installs new requirements)
+docker build -t sentiment-app .
+
+# 4. Run the new container on Port 
+80
+docker run -d -p 80:80 sentiment-app
+```
+### 4. Troubleshooting
+If something breaks, check the logs:
+
+```
+docker logs $(docker ps -q)
+```
+You can keep the DEPLOYMENT_GUIDE.md file in your repository so you never lose these instructions!
+
+Completed
+
+
+
+### Required EC2 Inbound Rules
+You need to add these two rules in your AWS Console under EC2 > Security Groups > Edit Inbound Rules :
+
+Type Protocol Port Range Source Why is this needed? HTTP TCP 80 0.0.0.0/0 (Anywhere) Critical : Allows everyone on the internet to see your website. SSH TCP 22 My IP (Recommended) Allows you to connect via PuTTY and WinSCP to upload files.
+
+If you don't add the HTTP (80) rule, the website will timeout when you try to visit it in the browser.
+If you don't add the SSH (22) rule, WinSCP and PuTTY will fail to connect
+
+1. Missing File in Upload List : I added data_processing_and_features.py to the list of files to upload. Without this file, the app will crash because app.py imports functions from it.
+2. Auto-Restart Policy : I updated the docker run command to include --restart always . This ensures your website comes back up automatically if the server reboots.
+3. Public IP Warning : I added a note that if you Stop/Start your EC2 instance, your IP address will change (unless you use an Elastic IP).
+The updated guide is here: DEPLOYMENT_GUIDE.md

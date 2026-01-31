@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sentiment Analysis</title>
+  <style>
+    :root{
+      --bg1:#0f1220; --bg2:#15192e; --card:#1b2038; --text:#e6e8f0;
+      --muted:#a9afc7; --primary:#6c63ff; --primary-hover:#7b73ff;
+      --positive:#16a34a; --negative:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; position:relative;
+      background: radial-gradient(1200px 600px at 20% 10%, #1b1f3a 0%, var(--bg1) 40%, var(--bg2) 100%);
+      color:var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .glow{
+      position:absolute; width:520px; height:520px; border-radius:50%;
+      filter:blur(90px); opacity:.25; background:conic-gradient(from 180deg, #6c63ff, #22c55e, #ef4444, #6c63ff);
+      animation: spin 16s linear infinite;
+    }
+    .glow.glow-2{ width:380px; height:380px; right:10%; bottom:8%; animation-duration: 22s; opacity:.18 }
+    @keyframes spin{ to{ transform:rotate(360deg)} }
+    .card{
+      width:100%; max-width:560px; padding:28px; border-radius:16px; background:var(--card);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+      transform:translateY(0); transition:transform .25s ease;
+    }
+    .card:hover{ transform: translateY(-2px); }
+    h1{ margin:0 0 14px; font-weight:700; letter-spacing:.2px }
+    p.sub{ margin:0 0 22px; color:var(--muted); font-size:14px }
+    .field{
+      display:flex; gap:12px; margin-bottom:16px;
+    }
+    input[type="text"]{
+      flex:1; padding:14px 16px; border-radius:12px; border:1px solid #2a314f;
+      background:#12162a; color:var(--text); outline:none; transition:border-color .2s ease, box-shadow .2s ease;
+    }
+    input[type="text"]::placeholder{ color:#7d85a8 }
+    input[type="text"]:focus{
+      border-color:#3a4270; box-shadow:0 0 0 4px rgba(108,99,255,0.15);
+    }
+    button{
+      padding:12px 18px; border:none; border-radius:12px; cursor:pointer; font-weight:600;
+      background:linear-gradient(180deg, var(--primary), #5a52e6); color:white;
+      box-shadow:0 6px 18px rgba(108,99,255,.35); transition:transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    button:hover{ transform:translateY(-1px); filter:brightness(1.05); box-shadow:0 10px 24px rgba(108,99,255,.45) }
+    button.loading{ pointer-events:none; opacity:.85 }
+    .spinner{ width:18px; height:18px; border:2px solid rgba(255,255,255,.6); border-top-color:#fff; border-radius:50%; display:none; margin-left:8px; animation:spin 1s linear infinite }
+    button.loading .spinner{ display:inline-block }
+    .result{
+      margin-top:18px; padding:14px 16px; border-radius:12px; background:#131834; color:var(--text);
+      border:1px solid #2a314f; display:flex; align-items:center; gap:10px;
+    }
+    .chip{
+      padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; color:#fff;
+    }
+    .chip.positive{ background:linear-gradient(180deg, #22c55e, var(--positive)) }
+    .chip.negative{ background:linear-gradient(180deg, #ef4444, var(--negative)) }
+    .score{
+      margin-top:14px; background:#12162a; border:1px solid #2a314f; border-radius:12px; padding:10px 12px;
+    }
+    .score-label{ font-size:12px; color:var(--muted); margin-bottom:6px }
+    .score-bar{ height:10px; border-radius:999px; background:#0e1330; overflow:hidden; }
+    .score-fill{ height:100%; width:0; background:linear-gradient(90deg,#24c1ff,#6c63ff); transition:width .4s ease }
+    .score-fill.positive{ background:linear-gradient(90deg,#22c55e,#16a34a) }
+    .score-fill.negative{ background:linear-gradient(90deg,#ef4444,#dc2626) }
+    .links{ margin-top:10px; font-size:13px; color:var(--muted) }
+    .links a{ color:#9aa3ff; text-decoration:none }
+    .links a:hover{ text-decoration:underline }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="glow glow-2"></div>
+  <main class="card">
+    <h1>Sentiment Analysis</h1>
+    <p class="sub">Enter a review and analyze the sentiment instantly.</p>
+    <form action="{{ url_for('predict') }}" method="post" class="field" id="form">
+      <input type="text" name="Review" placeholder="Type a review…" required id="review" />
+      <button type="submit" id="analyze">Analyze <span class="spinner"></span></button>
+    </form>
+    {% if prediction_text %}
+    <div class="result">
+      {% set lower = prediction_text|lower %}
+      <span class="chip {{ 'positive' if 'positive' in lower else 'negative' }}">
+        {{ 'Positive' if 'positive' in lower else 'Negative' }}
+      </span>
+      <span>{{ prediction_text }}</span>
+    </div>
+    <div class="score">
+      <div class="score-label">Confidence score</div>
+      <div class="score-bar">
+        <div class="score-fill {{ label }}" style="width: {{ score }}%"></div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="links">
+      Try GET: /predict?text=movie%20is%20bad
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('form');
+    const btn = document.getElementById('analyze');
+    form.addEventListener('submit', ()=>{
+      btn.classList.add('loading');
+      setTimeout(()=>btn.classList.remove('loading'), 1500);
+    });
+  </script>
+</body>
+</html>

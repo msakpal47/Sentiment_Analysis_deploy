@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.env
+*.log
+.ipynb_checkpoints/
+deploy_package.zip
+archive.zip
+IMDB Dataset.csv
+data_train.csv
+data_pred.csv
